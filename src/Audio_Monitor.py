@@ -27,7 +27,7 @@ signal.signal(signal.SIGINT, signal_handler)
 
 
 class Communicator:
-    """Object for sneding data to the sentient data"""
+    """Object for sending data to the sentient data"""
     def __init__(self, address):
         self.address = address
 
