@@ -13,9 +13,10 @@ CHUNK = 8192
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 44100
-THRESHOLD = 20000
 BUFFER_SIZE = 128
+
 OUTPUT_FILE = "data.csv"
+THRESHOLD = 20000
 
 
 # Add signal listener
@@ -33,6 +34,7 @@ class Communicator:
 
     def sendData(self, string):
         # TODO: Implement stub
+        pass
 
 
 class ByteBuffer:
