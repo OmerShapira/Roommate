@@ -3,13 +3,15 @@ import pyaudio
 import signal
 import struct
 import sys
+import time
 from itertools import imap
 from array import array
 
-import urllib2
+from urllib2 import urlopen
+from urllib import urlencode
 
 
-CHUNK = 8192
+CHUNK = 4096
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 44100
@@ -32,9 +34,10 @@ class Communicator:
     def __init__(self, address):
         self.address = address
 
-    def sendData(self, string):
-        # TODO: Implement stub
-        pass
+    def sendData(self, data):
+        #debug
+        message = urlencode(data)
+        print(urlopen(self.address, message).read())
 
 
 class ByteBuffer:
@@ -54,11 +57,21 @@ class ByteBuffer:
         self.buffer_array[self.pointer] = sample
         self.pointer += 1
         if self.pointer >= self.size:
+            # debug
+            c = Communicator("http://192.168.1.251:3000/Session/J-Room/Update/")
+            data = {
+                'updates': [{
+                    'measureName': 'Sound',
+                    'timeStamp': int(time.time()),
+                    'value': int(self.buffer_array[0])}]}
+            c.sendData(message=data)
+        # /debug
             self.dump()
             self.pointer = 0
 
     def dump(self, size=None):
         size = size or self.size
+
         with open(self.output_file, "a+") as out_file:
             out_data = ','.join(imap(str, self.buffer_array))
             out_file.write(out_data)
@@ -93,6 +106,7 @@ def main():
             maxValue = max(data)
             if maxValue >= THRESHOLD:
                 print ("Clip : %d" % maxValue)
+            # print ("more")
 
 
 if __name__ == '__main__':
