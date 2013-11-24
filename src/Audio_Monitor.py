@@ -1,5 +1,3 @@
-# import pyaudio
-# import wave
 import json
 import struct
 import time
@@ -8,16 +6,6 @@ from array import array
 
 from urllib2 import urlopen
 from urllib import urlencode
-
-
-# CHUNK = 4096
-# FORMAT = pyaudio.paInt16
-# CHANNELS = 1
-# RATE = 44100
-# BUFFER_SIZE = 128
-
-# OUTPUT_FILE = "data.csv"
-# THRESHOLD = 20000
 
 
 def get_amplitude(sample_block, absolute=True):
@@ -42,24 +30,33 @@ class Session:
             self.name = name or "Unnamed Session at %s" % time.strftime("%a, %d %b %Y %H:%M:%S")
 
     def __enter__(self):
-        # self.begin_session()
-        pass
+        self.begin_session()
 
     def __exit__(self):
         pass
         # TODO: Is there anything that needs to be done for the session to end?
         # self.disconnect()
 
-    def begin_session(self):
-        data = {"name" : self.name}
-        print "Sending %s" % data
-        send_data(extension='Session/', data=data)
-
     def send_data(self, extension, data):
-        #debug
-        # message = urlencode(data)
         message = json.dumps(data)
         print(urlopen(self.address+'/'+extension, message).read())
+
+    def begin_session(self):
+        data = {"name": self.name}
+        print "Sending %s" % data
+        self.send_data(extension='Session/', data=json.dumps(data))
+
+    def update(self, measureName, value, timeStamp=None, description=''):
+        # FIXME: Is this the correct time format?
+        timeStamp = timeStamp or time.strftime("%H:%M:%S")
+        data = {"updates": [{
+            "measureName": measureName,
+            "value": value,
+            "timeStamp": timeStamp,
+            "description": description
+        }]}
+        self.send_data(extension='Session/' + self.name + '/Update/',
+                       data=json.dumps(data))
 
 
 class ByteBuffer:
