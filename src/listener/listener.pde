@@ -12,13 +12,18 @@ void setup()
   size(500, 500);
   frameRate(30);
   
-  sender = new SentientSender("192.168.1.253", 5000);
-  sender.startSession("ptest4");
+  sender = new SentientSender("128.122.151.163", 5000);
+  boolean res = sender.startSession("galtest2");
+  if (!res) {
+    println("cannot start a new session");
+  }
   
   ac = new AudioContext();
   
   mic = ac.getAudioInput();
-  ac.out.addInput(mic);
+  Gain gain = new Gain(ac, 1, 0);
+  gain.addInput(mic);
+  ac.out.addInput(gain);
   ac.start();
 }
 
@@ -51,7 +56,7 @@ void drawWaveForm()
     int buffIndex = i * ac.getBufferSize() / width;
     // then work out the pixel height of the audio data at
     // that point
-    int vOffset = (int)((1 + ac.out.getValue(0, buffIndex)) *
+    int vOffset = (int)((1 + mic.getValue(0, buffIndex)) *
                   height / 2);
     //draw into Processing's convenient 1-D array of pixels
     pixels[vOffset * height + i] = color(255);
@@ -66,7 +71,7 @@ float getMaxAmplitude()
   
   for (int i=0; i<ac.getBufferSize(); i++)
   {
-    float val = ac.out.getValue(0, i);
+    float val = mic.getValue(0, i);
     if (abs(val) > max) {
       max = abs(val);
     }
