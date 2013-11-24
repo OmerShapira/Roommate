@@ -13,7 +13,7 @@ BUFFER_SIZE = 128
 OUTPUT_FILE = "data.csv"
 THRESHOLD = 80  # out of 100
 
-SERVER_ADDRESS = "http://128.122.151.183:3000"
+SERVER_ADDRESS = "http://128.122.151.163:3000"
 
 # Signal listener to manually stop the program
 def signal_handler(signal, frame):
@@ -44,18 +44,24 @@ def main():
         rate=RATE,
         input=True,
         frames_per_buffer=CHUNK)
+    sesh = Session(address=SERVER_ADDRESS, name="JRoomTest8")
+    sesh.begin_session()
+    # print(stream.read(CHUNK))
+    # with ByteBuffer(size=BUFFER_SIZE, output_file=OUTPUT_FILE) as buf:
+    # with Session(address=SERVER_ADDRESS, name="JRoomTest3") as sesh:
+    while True:
+        data = get_amplitude(stream.read(CHUNK))
+         # average with integer division
+        avg = sum(imap(int, data)) / len(data)
+        sesh.update(measureName="Sound", value=log1p(avg), timeStamp=int(time.time()), description="Hi")
 
-    print(stream.read(CHUNK))
-    with ByteBuffer(size=BUFFER_SIZE, output_file=OUTPUT_FILE) as buf:
-        # with Session(address=SERVER_ADDRESS, name="J-Room") as sesh:
-        while True:
-            print '.',
-            data = get_amplitude(stream.read(CHUNK))
-            buf.add(sum(imap(int, data)) / len(data))  # integer division
-            maxValue = max(data)
-            logScale = log1p(maxValue) * 10 # TODO: Remove Magic number
-            if logScale >= THRESHOLD:
-                print ("Clip : %d" % logScale)
+
+    #             # buf.add(avg)
+    #             #FIXME: The average Needs to be in Log Scale
+    #             # maxValue = max(data) #FIXME: This is not reading the correct data.
+    #             # logScale = log1p(maxValue) * 10 # TODO: Remove Magic number
+    #             # if logScale >= THRESHOLD:
+    #             #     print ("Clip : %d" % logScale)
 
 
 if __name__ == '__main__':

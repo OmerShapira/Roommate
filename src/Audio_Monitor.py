@@ -4,8 +4,8 @@ import time
 from itertools import imap
 from array import array
 
-from urllib2 import urlopen
-from urllib import urlencode
+from urllib2 import Request, urlopen
+# from urllib import urlencode
 
 
 def get_amplitude(sample_block, absolute=True):
@@ -39,12 +39,14 @@ class Session:
 
     def send_data(self, extension, data):
         message = json.dumps(data)
-        print(urlopen(self.address+'/'+extension, message).read())
+        req = Request(self.address+'/'+extension, message, {'Content-Type': 'application/json'})
+        urlopen(req)
+        # print(urlopen()
 
     def begin_session(self):
         data = {"name": self.name}
         print "Sending %s" % data
-        self.send_data(extension='Session/', data=json.dumps(data))
+        self.send_data(extension='Session/', data=data)
 
     def update(self, measureName, value, timeStamp=None, description=''):
         # FIXME: Is this the correct time format?
@@ -55,8 +57,8 @@ class Session:
             "timeStamp": timeStamp,
             "description": description
         }]}
-        self.send_data(extension='Session/' + self.name + '/Update/',
-                       data=json.dumps(data))
+        self.send_data(extension='Session/' + self.name + '/Update',
+                       data=data)
 
 
 class ByteBuffer:
