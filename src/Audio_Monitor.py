@@ -1,8 +1,7 @@
-import pyaudio
+# import pyaudio
 # import wave
-import signal
+import json
 import struct
-import sys
 import time
 from itertools import imap
 from array import array
@@ -11,33 +10,56 @@ from urllib2 import urlopen
 from urllib import urlencode
 
 
-CHUNK = 4096
-FORMAT = pyaudio.paInt16
-CHANNELS = 1
-RATE = 44100
-BUFFER_SIZE = 128
+# CHUNK = 4096
+# FORMAT = pyaudio.paInt16
+# CHANNELS = 1
+# RATE = 44100
+# BUFFER_SIZE = 128
 
-OUTPUT_FILE = "data.csv"
-THRESHOLD = 20000
-
-
-# Add signal listener
-def signal_handler(signal, frame):
-        print ('Goodbye')
-        sys.exit(0)
-
-signal.signal(signal.SIGINT, signal_handler)
+# OUTPUT_FILE = "data.csv"
+# THRESHOLD = 20000
 
 
-class Communicator:
-    """Object for sending data to the sentient data"""
-    def __init__(self, address):
-        self.address = address
+def get_amplitude(sample_block, absolute=True):
+    format = "%dh" % (len(sample_block) / 2)
+    shorts = struct.unpack(format, sample_block)
+    if absolute:
+        return [abs(x) for x in shorts]
+    else:
+        return shorts
 
-    def sendData(self, data):
+
+class Session:
+    """
+    Object for sending data to the sentient data.
+    Will begin a session when called as 'with'
+    """
+    def __init__(
+            self,
+            address="http://128.122.151.183:3000",
+            name=None):
+            self.address = address
+            self.name = name or "Unnamed Session at %s" % time.strftime("%a, %d %b %Y %H:%M:%S")
+
+    def __enter__(self):
+        # self.begin_session()
+        pass
+
+    def __exit__(self):
+        pass
+        # TODO: Is there anything that needs to be done for the session to end?
+        # self.disconnect()
+
+    def begin_session(self):
+        data = {"name" : self.name}
+        print "Sending %s" % data
+        send_data(extension='Session/', data=data)
+
+    def send_data(self, extension, data):
         #debug
-        message = urlencode(data)
-        print(urlopen(self.address, message).read())
+        # message = urlencode(data)
+        message = json.dumps(data)
+        print(urlopen(self.address+'/'+extension, message).read())
 
 
 class ByteBuffer:
@@ -57,57 +79,16 @@ class ByteBuffer:
         self.buffer_array[self.pointer] = sample
         self.pointer += 1
         if self.pointer >= self.size:
-            # debug
-            c = Communicator("http://192.168.1.251:3000/Session/J-Room/Update/")
-            data = {
-                'updates': [{
-                    'measureName': 'Sound',
-                    'timeStamp': int(time.time()),
-                    'value': int(self.buffer_array[0])}]}
-            c.sendData(message=data)
-        # /debug
             self.dump()
             self.pointer = 0
 
     def dump(self, size=None):
         size = size or self.size
-
         with open(self.output_file, "a+") as out_file:
             out_data = ','.join(imap(str, self.buffer_array))
             out_file.write(out_data)
 
-    def __exit__(self):
+    def __exit__(self, *args):
+        for a in args:
+            print(a)
         self.dump(size=self.pointer)
-
-
-def get_amplitude(sample_block, absolute=True):
-    format = "%dh" % (len(sample_block) / 2)
-    shorts = struct.unpack(format, sample_block)
-    if absolute:
-        return [abs(x) for x in shorts]
-    else:
-        return shorts
-
-
-def main():
-    p = pyaudio.PyAudio()
-    stream = p.open(
-        format=FORMAT,
-        channels=CHANNELS,
-        rate=RATE,
-        input=True,
-        frames_per_buffer=CHUNK)
-
-    with ByteBuffer(size=BUFFER_SIZE, output_file=OUTPUT_FILE) as buf:
-        while True:
-            data = get_amplitude(stream.read(CHUNK))
-            buf.add(sum(imap(int, data))/len(data))  # integer division
-            # print max(data)
-            maxValue = max(data)
-            if maxValue >= THRESHOLD:
-                print ("Clip : %d" % maxValue)
-            # print ("more")
-
-
-if __name__ == '__main__':
-    main()

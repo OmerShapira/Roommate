@@ -76,7 +76,7 @@ class SendQueue(threading.Thread):
 
 def main():
     services = []
-    with SendQueue(api_address="http://192.168.1.251:3000") as queue:
+    with SendQueue(api_address="http://128.122.151.163:3000") as queue:
         for runnable in services:
             # FIXME : non-object oriented
             runnable.message_callback = queue.put
