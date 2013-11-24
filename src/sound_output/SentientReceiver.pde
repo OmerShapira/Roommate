@@ -22,7 +22,7 @@ class SentientReceiver extends Thread
     while (isRunning)
     {
       if (fakeEmotion) {
-        currentEmotion = "Nervous";
+        currentEmotion = "Agitated";
       }
       else {
         currentEmotion = requestLastEmotion();
@@ -51,6 +51,11 @@ class SentientReceiver extends Thread
       "&resolution=0");
     
     JSONArray responseArray = json.getJSONArray("entityResponse");
+    if (responseArray.size() == 0) {
+      // no respose from the last 20 seconds
+      return "none";
+    }
+    
     JSONObject lastUpdate = responseArray.getJSONObject(responseArray.size()-1);
     
     // last update looks like this
