@@ -87,22 +87,21 @@ class AudioDataBuffer:
                 self.dumpToSession()
             self.pointer = 0
 
-    def get_average_RMS(self, size=None):
+    def get_average_VU(self, size=None):
         size = size or self.size
-        rms = sum(self.buffer_array[:size]) / size
-        return rms
+        avg = sum(self.buffer_array[:size]) / size
+        return avg
 
     def dumpToSession(self, size=None):
-        rms = self.get_average_RMS(size=size)
-        print " ->  Sent: "+str(rms)
+        avg = self.get_average_VU(size=size)
+        print " ->  Sent: "+str(avg)
         if self.output_session:
             self.output_session.update(
-                measureName="Sound", value=rms)
+                measureName="Sound", value=avg)
 
     def dumpToFile(self, size=None):
         with open(self.output_file, "a+") as out_file:
-            # out_data = ','.join(imap(str, self.buffer_array))
-            out_data = self.get_average_RMS(size=size)
+            out_data = self.get_average_VU(size=size)
             out_file.write(out_data)
 
     def __exit__(self, *args):
