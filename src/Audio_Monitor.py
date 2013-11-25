@@ -3,9 +3,8 @@ import struct
 import time
 from itertools import imap
 from array import array
-
+from math import log1p
 from urllib2 import Request, urlopen
-# from urllib import urlencode
 
 
 def get_amplitude(sample_block, absolute=True):
@@ -50,7 +49,7 @@ class Session:
 
     def update(self, measureName, value, timeStamp=None, description=''):
         # FIXME: Is this the correct time format?
-        timeStamp = timeStamp or time.strftime("%H:%M:%S")
+        timeStamp = timeStamp or int(round(time.time() * 1000))
         data = {"updates": [{
             "measureName": measureName,
             "value": value,
@@ -61,33 +60,55 @@ class Session:
                        data=data)
 
 
-class ByteBuffer:
+class AudioDataBuffer:
     """Buffer for sound objects"""
-    def __init__(self, size, output_file):
+    def __init__(self, size, output_file=None, output_session=None):
         # FIXME: unpythonic type checking
         self.size = int(size)
-        self.output_file = str(output_file)
+        self.output_file = str(output_file) if output_file else None
+        if output_session:
+            self.output_session = output_session
+            self.output_session.begin_session()
         self.pointer = 0
 
         self.buffer_array = array('i', [0 for i in xrange(self.size)])
 
     def __enter__(self):
+        # TODO: Maybe init here?
         return self
 
     def add(self, sample):
         self.buffer_array[self.pointer] = sample
         self.pointer += 1
         if self.pointer >= self.size:
-            self.dump()
+            if self.output_file:
+                self.dumpToFile()
+            if self.output_session:
+                self.dumpToSession()
             self.pointer = 0
 
-    def dump(self, size=None):
+    def get_average_RMS(self, size=None):
         size = size or self.size
+        rms = sum(self.buffer_array[:size]) / size
+        return rms
+
+    def dumpToSession(self, size=None):
+        rms = self.get_average_RMS(size=size)
+        print " ->  Sent: "+str(rms)
+        if self.output_session:
+            self.output_session.update(
+                measureName="Sound", value=rms)
+
+    def dumpToFile(self, size=None):
         with open(self.output_file, "a+") as out_file:
-            out_data = ','.join(imap(str, self.buffer_array))
+            # out_data = ','.join(imap(str, self.buffer_array))
+            out_data = self.get_average_RMS(size=size)
             out_file.write(out_data)
 
     def __exit__(self, *args):
         for a in args:
             print(a)
-        self.dump(size=self.pointer)
+        if self.output_file:
+            self.dumpToFile(size=self.pointer)
+        if self.output_session:
+            self.dumpToSession(size=self.pointer)
