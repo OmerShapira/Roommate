@@ -3,8 +3,9 @@ import sys
 import signal
 import pyaudio
 from math import log1p
+from time import localtime, strftime
 
-CHUNK = 2048
+CHUNK = 4096
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 44100
@@ -33,7 +34,8 @@ def main():
         rate=RATE,
         input=True,
         frames_per_buffer=CHUNK)
-    sesh = Session(address=SERVER_ADDRESS, name="JRoom"+str(int(time.time()*1000)))
+    now = strftime("%Y-%m-%d", localtime())
+    sesh = Session(address=SERVER_ADDRESS, name="JRoom-"+now)
     with AudioDataBuffer(size=BUFFER_SIZE, output_file=None, output_session=sesh) as buf:
         while True:
             data = get_amplitude(stream.read(CHUNK))
