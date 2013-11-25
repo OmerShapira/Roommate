@@ -1,20 +1,3 @@
-int PLAY_SHH = 0;
-int STOP_SHH = 1;
-int PLAY_WAVE = 2;
-int STOP_WAVE = 3;
-
-class InjectorMessage
-{
-  long time;
-  int task;
-  
-  public InjectorMessage(int task, long time)
-  {
-    this.task = task;
-    this.time = time;
-  }
-}
-
 class SoundInjector extends Thread
 {
   AudioContext ac;
@@ -28,14 +11,41 @@ class SoundInjector extends Thread
     msgs = new ArrayList<InjectorMessage>();
   }
   
-  public void addMessage(int task, long time)
+  public void recordSample(long length)
   {
-    long currentTime = System.currentTimeMillis();
-
-    // put the message in the que to be handled by the thread
-    msgs.add(new InjectorMessage(task, time));
+    injecting = true;
+    ambProc.clearVol();
+    msgs.add(new InjectorMessage(InjectorTask.REC_SAMPLE, System.currentTimeMillis()));
+    msgs.add(new InjectorMessage(InjectorTask.STOPREC_SAMPLE, System.currentTimeMillis()+length));
   }
   
+  public void playShh()
+  {
+    println("injecting shh");
+    injecting = true;
+    ambProc.clearVol();
+    msgs.add(new InjectorMessage(InjectorTask.PLAY_SHH, System.currentTimeMillis()));
+    msgs.add(new InjectorMessage(InjectorTask.STOP_SHH, System.currentTimeMillis()+20000));
+  }
+  
+  public void playWind()
+  {
+    println("injecting wind");
+    injecting = true;
+    ambProc.clearVol();
+    msgs.add(new InjectorMessage(InjectorTask.PLAY_WIND, System.currentTimeMillis()));
+    msgs.add(new InjectorMessage(InjectorTask.STOP_WIND, System.currentTimeMillis()+20000));
+  }
+  
+  public void playSample(Sample s)
+  {
+    println("playing random sample");
+    injecting = true;
+    ambProc.clearVol();
+    msgs.add(new InjectorMessage(InjectorTask.PLAY_SAMPLE, System.currentTimeMillis(), s));
+    msgs.add(new InjectorMessage(InjectorTask.STOP_SAMPLE, System.currentTimeMillis() + (long)s.getLength()));
+  }
+    
   public void run()
   {
     isRunning = true;
@@ -49,7 +59,7 @@ class SoundInjector extends Thread
         InjectorMessage msg = msgs.get(i);
         if (msg.time <= time) {
           // handle the message
-          handleMessage(msg.task);
+          handleMessage(msg);
           
           // mark the message for deletion
           toDelete.add(msg);
@@ -68,28 +78,41 @@ class SoundInjector extends Thread
     }
   }
   
-  public void handleMessage(int task)
+  public void handleMessage(InjectorMessage msg)
   {
-      switch(task)
-      {
-        case 0:  // PLAY_SHH
-          injectShh();
-          println("injecting shh");
-          break;
-        
-        case 1:  // STOP_SHH
-          ambProc.activate();
-          break;
-        
-        case 2:  // PLAY_WAVE
-          println("injecting wave");
-          injectWave();
-          break;
-          
-        case 3:  // STOP_WAVE
-          ambProc.activate();
-          break;
-      }
+    if (msg.task == InjectorTask.PLAY_SHH) {
+      injectShh();
+    }
+    else if (msg.task == InjectorTask.STOP_SHH) {
+      injecting = false;
+    }        
+    else if (msg.task == InjectorTask.PLAY_WIND) {
+      injectWave();
+    }
+    else if (msg.task == InjectorTask.STOP_WIND) {
+      injecting = false;
+    }
+    else if (msg.task == InjectorTask.PLAY_SAMPLE) {
+      injectSample(msg.sample);
+    }
+    else if (msg.task == InjectorTask.STOP_SAMPLE) {
+      injecting = false;
+    }
+    else if (msg.task == InjectorTask.STOPREC_SAMPLE) {
+      injecting = false;
+    }
+  }
+  
+  private void injectSample(Sample s)
+  {
+    SamplePlayer sp = new SamplePlayer(ac, s);
+    Envelope gainEnv = new Envelope(ac, 0.0);
+    gainEnv.addSegment(1, 2000);
+    gainEnv.addSegment(1, s.getLength()-1000);
+    gainEnv.addSegment(0, s.getLength());
+    Gain spGain = new Gain(ac, 1, gainEnv);
+    spGain.addInput(sp);
+    ac.out.addInput(spGain);
   }
   
   private void injectShh()
@@ -111,7 +134,7 @@ class SoundInjector extends Thread
     // setup gain evelope
     Envelope gainEnv = new Envelope(ac, 0.0);
     gainEnv.addSegment(0.1, 5000);
-    gainEnv.addSegment(0.5, 5000);
+    gainEnv.addSegment(0.6, 5000);
     gainEnv.addSegment(0.05, 5000);
     gainEnv.addSegment(0.05, 10000);
     gainEnv.addSegment(0.0, 10000);
@@ -138,7 +161,7 @@ class SoundInjector extends Thread
     // setup gain evelope
     Envelope gainEnv = new Envelope(ac, 0.0);
     gainEnv.addSegment(0.1, 5000);
-    gainEnv.addSegment(0.5, 5000);
+    gainEnv.addSegment(0.8, 5000);
     gainEnv.addSegment(0.05, 5000);
     gainEnv.addSegment(0.05, 10000);
     gainEnv.addSegment(0.0, 2000);
@@ -148,6 +171,28 @@ class SoundInjector extends Thread
     ac.out.addInput(gain);
   }
   
-  
 }
+
+
+class InjectorMessage
+{
+  long time;
+  InjectorTask task;
+  Sample sample;
+  
+  public InjectorMessage(InjectorTask task, long time)
+  {
+    this.task = task;
+    this.time = time;
+    sample = null;
+  }
+  
+  public InjectorMessage(InjectorTask task, long time, Sample sample)
+  {
+    this.task = task;
+    this.time = time;
+    this.sample = sample;
+  }
+}
+
 

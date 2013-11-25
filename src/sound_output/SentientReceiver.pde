@@ -22,7 +22,7 @@ class SentientReceiver extends Thread
     while (isRunning)
     {
       if (fakeEmotion) {
-        currentEmotion = "Agitated";
+        currentEmotion = "Overwhelmed";
       }
       else {
         currentEmotion = requestLastEmotion();
@@ -42,7 +42,7 @@ class SentientReceiver extends Thread
   
   private String requestLastEmotion()
   {
-    long time = System.currentTimeMillis()-20000;
+    long time = System.currentTimeMillis()-10000;
     JSONObject json = loadJSONObject("http://"+ip+":3000/SessionResult/?"+
       "session="+session+
       "&measure="+measure+
