@@ -11,12 +11,13 @@ AccelStepper steppers[NUM_STEPPERS] = {
   AccelStepper(1, 3, 2),
   AccelStepper(1, 7, 6)};
 int delta[NUM_STEPPERS] = {800, 600, 600, 820}; //TODO: Give 1,2 a real value
-int speed[NUM_STEPPERS] = {3000, 3000, 3000, 2500};
-int acceleration[NUM_STEPPERS] = {1000, 1000, 100, 800};
+int speed[NUM_STEPPERS] = {3000, 1200, 1000, 2500};
+int acceleration[NUM_STEPPERS] = {1200, 200, 100, 800};
 
 bool newCommand = false;
 int command = 0;
 int mode = 0;
+
 
 void setup()
 {  
@@ -34,16 +35,16 @@ void loop()
     switch (command) {
       case SHUT_FAST:
       for (int i = 0 ; i < NUM_STEPPERS ; i++){
-        steppers[i].moveTo(-abs(detla[i]));
+        steppers[i].moveTo(-abs(delta[i]));
         steppers[i].setMaxSpeed(3000);
         steppers[i].setAcceleration(1500);
       }
       break;
       case SHUT_SLOWLY:
       for (int i = 0 ; i < NUM_STEPPERS ; i++){
-        steppers[i].moveTo(-abs(detla[i]));
-        steppers[i].setMaxSpeed(3000);
-        steppers[i].setAcceleration(1500);
+        steppers[i].moveTo(-abs(delta[i]));
+        steppers[i].setMaxSpeed(1000);
+        steppers[i].setAcceleration(200);
       }
       break;
       case RANDOM_PATTERN1:
@@ -52,11 +53,11 @@ void loop()
         default: break; //Should never happen
       }
       } else {
-        switch (commmand) {
+        switch (command) {
           case RANDOM_PATTERN1:
           setMotorsByArrays(false); //Don't force new values
           break;
-          default:
+          default: break;
           // do something
         }
       }
