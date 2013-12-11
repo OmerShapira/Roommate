@@ -22,8 +22,8 @@ void setup()
 {  
   Serial.begin(9600);
   for(int i=0; i<NUM_STEPPERS; i++){
-      steppers[i].setMaxSpeed(speed[i]);
-      steppers[i].setAcceleration(acceleration[i]);
+    steppers[i].setMaxSpeed(speed[i]);
+    steppers[i].setAcceleration(acceleration[i]);
   }
 }
 
@@ -32,48 +32,59 @@ void loop()
   if(newCommand){
     newCommand = false;
     switch (command) {
-        case SHUT_FAST:
-          // do something
-          break;
-        case SHUT_SLOWLY:
-          // do something
-          break;
-        case RANDOM_PATTERN1:
-          setMotorsByArrays(true);
-          break;
+      case SHUT_FAST:
+      for (int i = 0 ; i < NUM_STEPPERS ; i++){
+        steppers[i].moveTo(-abs(detla[i]));
+        steppers[i].setMaxSpeed(3000);
+        steppers[i].setAcceleration(1500);
+      }
+      break;
+      case SHUT_SLOWLY:
+      for (int i = 0 ; i < NUM_STEPPERS ; i++){
+        steppers[i].moveTo(-abs(detla[i]));
+        steppers[i].setMaxSpeed(3000);
+        steppers[i].setAcceleration(1500);
+      }
+      break;
+      case RANDOM_PATTERN1:
+      setMotorsByArrays(true);
+      break;
         default: break; //Should never happen
-    }
-  } else {
-    switch (commmand) {
-        case RANDOM_PATTERN1:
+      }
+      } else {
+        switch (commmand) {
+          case RANDOM_PATTERN1:
           setMotorsByArrays(false); //Don't force new values
           break;
-        default:
+          default:
           // do something
+        }
+      }
+
+      for(int i=0; i<NUM_STEPPERS; i++){
+        steppers[i].run();
+      }
+    }
+
+    void setMotorsByArrays(bool force){
+  for(int i=0; i<NUM_STEPPERS; i++){ //if you're looping
+    if (steppers[i].distanceToGo() == 0){
+        delta[i] *= -1; //HACK: To save Building another array
+        steppers[i].moveTo(delta[i]);
+      }
+    if (force){
+      steppers[i].moveTo(delta[i]);
+      steppers[i].setMaxSpeed(speed[i]);
+      steppers[i].setAcceleration(acceleration[i]);
+    }
     }
   }
 
-  for(int i=0; i<NUM_STEPPERS; i++){
-    steppers[i].run();
+  void serialEvent() {
+    while (Serial.available()) {
+      command = Serial.parseInt();
+      newCommand = true;
+    }
   }
-}
-
-void setMotorsByArrays(bool force){
-  for(int i=0; i<NUM_STEPPERS; i++){ //if you're looping
-      if (steppers[i].distanceToGo() == 0){
-        delta[i] *= -1; //HACK: To save Building another array
-      }
-      if (steppers[i].distanceToGo() == 0 || force){
-        steppers[i].moveTo(max(delta[i], 0));
-      }
-  }
-}
-
-void serialEvent() {
-  while (Serial.available()) {
-    command = Serial.parseInt();
-    newCommand = true;
-  }
-}
 
 
