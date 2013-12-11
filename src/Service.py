@@ -5,7 +5,7 @@ import pyaudio
 from math import log1p, exp, e, sqrt
 from time import localtime, strftime
 
-CHUNK = 4096
+CHUNK = 2048
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 44100
