@@ -1,7 +1,7 @@
 import beads.*;
 import java.net.*;
 import java.io.*;
-
+import javax.sound.sampled.AudioFormat;
 
 AudioContext ac;
 
@@ -10,15 +10,20 @@ Gain inputGain;
 AmbienceProcessor ambProc;
 SoundInjector injector;
 SentientReceiver emotionListener;
+SampleRecorder recorder;
 
-boolean fakeEmotion = true;
+ArrayList<Sample> samples;
+
+boolean fakeEmotion = false;
+
+boolean injecting = false;
 
 void setup()
 {
   size(500, 500);
   frameRate(30);
   
-  emotionListener = new SentientReceiver("128.122.151.163", "galtest2");
+  emotionListener = new SentientReceiver("128.122.151.163", "JRoom-2013-11-24-22-51-01");
   emotionListener.start();
   
   ac = new AudioContext();
@@ -32,6 +37,8 @@ void setup()
   injector = new SoundInjector(ac);
   ambProc = new AmbienceProcessor(ac, mic);
 
+  samples = new ArrayList<Sample>();
+  
   ac.start();
   ambProc.start();
   injector.start();
@@ -43,21 +50,69 @@ void draw()
   
   float amp = ambProc.getCurrentVolume();
   
+  float rec = random(200);
+  if (rec < 2)
+  {
+    if (amp > 0.1)
+    {
+      // record env samples
+      if (recorder == null)
+      {
+        if (amp > 0.1)
+        {
+          println("recording sample");
+          long length = 5000 + (long)random(2000);
+          recorder = new SampleRecorder(ac, mic, length);
+          recorder.start();
+          injector.recordSample(length);
+        }
+      }      
+    }
+  }
+  
   /* handle system emotions and trigger sounds accordingly */
   if (emotionListener.getCurrentEmotion().equals("Nervous")) 
   { 
     if (amp > 0.2) {
-      ambProc.deactivate();
-      injector.addMessage(PLAY_WAVE, System.currentTimeMillis());
-      injector.addMessage(STOP_WAVE, System.currentTimeMillis()+20000);
+      injector.playWind();
     }
   }
   else if (emotionListener.getCurrentEmotion().equals("Agitated")) 
   { 
     if (amp > 0.2) {
-      ambProc.deactivate();
-      injector.addMessage(PLAY_SHH, System.currentTimeMillis());
-      injector.addMessage(STOP_SHH, System.currentTimeMillis()+20000);
+      injector.playShh();
+    }  
+  }
+  else if (emotionListener.getCurrentEmotion().equals("Overwhelmed")) 
+  { 
+    int r = (int)random(100);
+
+    if (r<10) {
+      // random (30-40): play prerecorded samples
+      if (amp > 0.1)
+      {
+        if (samples.size() > 0)
+        {
+          int sIndex = (int)random(samples.size());
+          {
+            injector.playSample(samples.get(sIndex));
+          }
+        }
+      }
+    }
+    else if (r < 30) {
+      // random (40-100): play shh noise
+      if (amp > 0.1) {
+        injector.playShh();
+      }
+    }
+  }
+  
+  // check for finished recording samples
+  if (recorder != null) {
+    if (recorder.finished) {
+      samples.add(recorder.getSample());
+      recorder = null;
     }
   }
 
@@ -103,12 +158,32 @@ float getMaxAmplitude()
     }
   }
   
-//  double a = Math.log10(1);
-//  double b = Math.log10(0);
-//  double lin = Math.log10(max);
-//  println("a = " + a + ", b = " + b);
-//  println(max + " = " + lin);
-//  return (float)lin;
   return max;
+}
+
+public void keyPressed()
+{
+  println(keyCode);
+  if (keyCode == 82)  // 'r'
+  {
+    if (recorder == null)
+    {
+      println("recording sample");
+      long length = 5000 + (long)random(2000);
+      recorder = new SampleRecorder(ac, mic, length);
+      recorder.start();
+      injector.recordSample(length);
+    }
+  }
+  else if (keyCode == 80) // 'p'
+  {
+    if (samples.size() > 0)
+    {
+      int sIndex = (int)random(samples.size());
+      {
+        injector.playSample(samples.get(sIndex));
+      }
+    }
+  }
 }
 

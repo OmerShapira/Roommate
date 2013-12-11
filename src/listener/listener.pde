@@ -13,7 +13,7 @@ void setup()
   frameRate(30);
   
   sender = new SentientSender("128.122.151.163", 5000);
-  boolean res = sender.startSession("galtest2");
+  boolean res = sender.startSession("galtest4");
   if (!res) {
     println("cannot start a new session");
   }

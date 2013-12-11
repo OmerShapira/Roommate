@@ -26,7 +26,7 @@ class AmbienceProcessor extends Thread
     while (isRunning)
     {
       // check current mic volume
-      if (micActive) {
+      if (!injecting) {
         volumeBuffer.write(getMaxVolume());
       }
       else {
@@ -49,6 +49,11 @@ class AmbienceProcessor extends Thread
   public void activate()
   {
     micActive = true;
+  }
+  
+  public void clearVol()
+  {
+    volumeBuffer.clear();
   }
   
   public float getCurrentVolume()
