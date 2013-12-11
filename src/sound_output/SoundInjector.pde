@@ -11,6 +11,21 @@ class SoundInjector extends Thread
     msgs = new ArrayList<InjectorMessage>();
   }
   
+  public void curtainRandom()
+  {
+    msgs.add(new InjectorMessage(InjectorTask.CURTAIN_RANDOM, System.currentTimeMillis()));
+  }
+  
+  public void curtainOpen()
+  {
+    msgs.add(new InjectorMessage(InjectorTask.CURTAIN_OPEN, System.currentTimeMillis()));
+  }  
+
+  public void curtainClose()
+  {
+    msgs.add(new InjectorMessage(InjectorTask.CURTAIN_CLOSE, System.currentTimeMillis()));
+  }  
+  
   public void recordSample(long length)
   {
     injecting = true;
@@ -24,7 +39,9 @@ class SoundInjector extends Thread
     println("injecting shh");
     injecting = true;
     ambProc.clearVol();
+    msgs.add(new InjectorMessage(InjectorTask.CURTAIN_OPEN, System.currentTimeMillis()));
     msgs.add(new InjectorMessage(InjectorTask.PLAY_SHH, System.currentTimeMillis()));
+    msgs.add(new InjectorMessage(InjectorTask.CURTAIN_SHUT, System.currentTimeMillis()+10000));
     msgs.add(new InjectorMessage(InjectorTask.STOP_SHH, System.currentTimeMillis()+20000));
   }
   
@@ -44,6 +61,7 @@ class SoundInjector extends Thread
     ambProc.clearVol();
     msgs.add(new InjectorMessage(InjectorTask.PLAY_SAMPLE, System.currentTimeMillis(), s));
     msgs.add(new InjectorMessage(InjectorTask.STOP_SAMPLE, System.currentTimeMillis() + (long)s.getLength()));
+    
   }
     
   public void run()
@@ -93,13 +111,36 @@ class SoundInjector extends Thread
       injecting = false;
     }
     else if (msg.task == InjectorTask.PLAY_SAMPLE) {
-      injectSample(msg.sample);
+      injectGranularSample(msg.sample);
+//      injectSample(msg.sample);
     }
     else if (msg.task == InjectorTask.STOP_SAMPLE) {
       injecting = false;
     }
     else if (msg.task == InjectorTask.STOPREC_SAMPLE) {
       injecting = false;
+    }
+    else if (msg.task == InjectorTask.CURTAIN_RANDOM) {
+      serialSend("2");
+    }
+    else if (msg.task == InjectorTask.CURTAIN_OPEN) {
+      serialSend("8");
+    }
+    else if (msg.task == InjectorTask.CURTAIN_CLOSE) {
+      serialSend("1");
+    }
+    else if (msg.task == InjectorTask.CURTAIN_SHUT) {
+      serialSend("0");
+    }
+  }
+  
+  private void serialSend(String s)
+  {
+    if (useSerial) {
+      serial.write(s);
+    }
+    else {
+      println(s);
     }
   }
   
@@ -113,6 +154,44 @@ class SoundInjector extends Thread
     Gain spGain = new Gain(ac, 1, gainEnv);
     spGain.addInput(sp);
     ac.out.addInput(spGain);
+  }
+
+  private void injectGranularSample(Sample s)
+  {
+    GranularSamplePlayer gsp = new GranularSamplePlayer(ac, s);
+    Glide randomnessValue = new Glide(ac, 80, 10);
+    
+    Envelope intEnv = new Envelope(ac, 100);
+    intEnv.addSegment(60, 2000);
+    intEnv.addSegment(5, 200);
+    intEnv.addSegment(5, 2000);
+    intEnv.addSegment(100, 200);
+//    Glide intervalValue = new Glide(ac, 5, 100);
+    
+    Envelope gsizeEnv = new Envelope(ac, 300);
+    gsizeEnv.addSegment(5, 300);
+    gsizeEnv.addSegment(10, 300);
+    gsizeEnv.addSegment(50, 300);
+    
+    Envelope posEnv = new Envelope(ac, 0);
+    posEnv.addSegment(s.getLength(), s.getLength());
+//    Glide grainSizeValue = new Glide(ac, 50, 50);
+//    Glide positionValue = new Glide(ac, random(0,s.getLength()-500), 30);
+    Glide pitchValue = new Glide(ac, 1, 20);
+    gsp.setRandomness(randomnessValue);
+    gsp.setGrainInterval(intEnv);
+    gsp.setGrainSize(gsizeEnv);
+    gsp.setPosition(posEnv);
+    gsp.setPitch(pitchValue);
+    
+//    Envelope gainEnv = new Envelope(ac, 0.0);
+//    gainEnv.addSegment(1, 2000);
+//    gainEnv.addSegment(1, s.getLength()-1000);
+//    gainEnv.addSegment(0, s.getLength());
+//    Gain gspGain = new Gain(ac, 1, gainEnv);
+//    gspGain.addInput(gsp);
+    ac.out.addInput(gsp);
+    gsp.start();
   }
   
   private void injectShh()

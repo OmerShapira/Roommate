@@ -1,3 +1,5 @@
+import processing.serial.*;
+
 import beads.*;
 import java.net.*;
 import java.io.*;
@@ -14,16 +16,29 @@ SampleRecorder recorder;
 
 ArrayList<Sample> samples;
 
-boolean fakeEmotion = false;
+boolean fakeEmotion = true;
 
 boolean injecting = false;
+
+boolean useSerial = false;
+Serial serial;
+
+String lastEmotion;
 
 void setup()
 {
   size(500, 500);
   frameRate(30);
   
+  // init serial
+  if (useSerial)
+  {
+    println(Serial.list());
+    serial = new Serial(this, Serial.list()[0], 9600);
+  }
+  
   emotionListener = new SentientReceiver("128.122.151.163", "JRoom-2013-11-24-22-51-01");
+  lastEmotion = emotionListener.getCurrentEmotion();
   emotionListener.start();
   
   ac = new AudioContext();
@@ -41,7 +56,7 @@ void setup()
   
   ac.start();
   ambProc.start();
-  injector.start();
+  injector.start();  
 }
 
 void draw()
@@ -50,6 +65,7 @@ void draw()
   
   float amp = ambProc.getCurrentVolume();
   
+  // record env samples
   float rec = random(200);
   if (rec < 2)
   {
@@ -70,20 +86,39 @@ void draw()
     }
   }
   
+  String emotion = emotionListener.getCurrentEmotion();
+  
   /* handle system emotions and trigger sounds accordingly */
-  if (emotionListener.getCurrentEmotion().equals("Nervous")) 
-  { 
+  if (emotion.equals("Bored"))
+  {
+    if (!emotion.equals(lastEmotion)) {
+      injector.curtainRandom();
+    }
+  }
+  else if (emotion.equals("Calm And Focused")) {
+    if (!emotion.equals(lastEmotion)) {
+      injector.curtainOpen();
+    }
+  }
+  else if (emotion.equals("Nervous")) 
+  {
+    if (!emotion.equals(lastEmotion)) {
+      injector.curtainClose();
+    }
     if (amp > 0.2) {
       injector.playWind();
     }
   }
-  else if (emotionListener.getCurrentEmotion().equals("Agitated")) 
+  else if (emotion.equals("Agitated")) 
   { 
+    if (!emotion.equals(lastEmotion)) {
+      injector.curtainClose();
+    }
     if (amp > 0.2) {
       injector.playShh();
     }  
   }
-  else if (emotionListener.getCurrentEmotion().equals("Overwhelmed")) 
+  else if (emotion.equals("Overwhelmed")) 
   { 
     int r = (int)random(100);
 
@@ -108,17 +143,25 @@ void draw()
     }
   }
   
+  lastEmotion = emotion;
+  
   // check for finished recording samples
   if (recorder != null) {
     if (recorder.finished) {
       samples.add(recorder.getSample());
       recorder = null;
     }
+
+    // draw record dot    
+    fill(255, 0, 0);
+    noStroke();
+    ellipse(20, height/2-20, 20, 20);
   }
 
   ambProc.draw(0, height/2+10, width, height/2-20);
   
   drawWaveForm(0, 0, width, height/2);
+  
 }
 
 void drawWaveForm(int x, int y, int w, int h)
@@ -143,7 +186,7 @@ void drawWaveForm(int x, int y, int w, int h)
     pixels[y*width + x + vOffset * height + i] = color(255);
   }
   // paint the new pixel array to the screen
-  updatePixels();
+  updatePixels();  
 }
 
 float getMaxAmplitude()
