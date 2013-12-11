@@ -1,4 +1,4 @@
-#define NUM_STEPPERS
+#define NUM_STEPPERS 4
 #include <AccelStepper.h>
 
 #define SHUT_FAST 0
