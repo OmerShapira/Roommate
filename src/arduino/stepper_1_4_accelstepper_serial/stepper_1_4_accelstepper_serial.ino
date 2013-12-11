@@ -4,6 +4,7 @@
 #define SHUT_FAST 0
 #define SHUT_SLOWLY 1
 #define RANDOM_PATTERN1 2
+#define STAY_OPEN 8
 #define STOP 9
 
 AccelStepper steppers[NUM_STEPPERS] = {
@@ -17,7 +18,7 @@ int acceleration[NUM_STEPPERS] = {1200, 200, 100, 800};
 
 bool newCommand = false;
 int command = SHUT_SLOWLY;
-
+bool stopped = false;
 
 void setup()
 {  
@@ -33,50 +34,68 @@ void loop()
   if(newCommand){
     newCommand = false;
     switch (command) {
+      case STOP:
+        stopped = true;
+        break;
       case SHUT_FAST:
+      stopped = false;
       for (int i = 0 ; i < NUM_STEPPERS ; i++){
+        steppers[i].setMaxSpeed(5000);
+        steppers[i].setAcceleration(5000);
         steppers[i].moveTo(0);
-        steppers[i].setMaxSpeed(1500);
-        steppers[i].setAcceleration(1200);
       }
       break;
       case SHUT_SLOWLY:
+      stopped = false;
       for (int i = 0 ; i < NUM_STEPPERS ; i++){
         steppers[i].moveTo(0);
-        steppers[i].setMaxSpeed(1000);
-        steppers[i].setAcceleration(200);
+        steppers[i].setMaxSpeed(1200);
+        steppers[i].setAcceleration(800);
       }
       break;
+      case STAY_OPEN: //do the randomPattern
+        stopped = false;
+        setMotorsByArrays(true,false);
+        break;
       case RANDOM_PATTERN1:
-        setMotorsByArrays(true);
+        stopped = false;
+        setMotorsByArrays(true,true);
         break;
         default: break; //Should never happen
       }
       } else {
         switch (command) {
+          case STAY_OPEN:
+            setMotorsByArrays(false,false);
+            break;
           case RANDOM_PATTERN1:
-            setMotorsByArrays(false); //Don't force new values
+            setMotorsByArrays(false,true); //Don't force new values
             break;
           default: break;
         }
       }
 
-      for(int i=0; i<NUM_STEPPERS; i++){
-        steppers[i].run();
+      if(!stopped){
+        for(int i=0; i<NUM_STEPPERS; i++){
+          steppers[i].run();
+        }
       }
+      
     }
 
-    void setMotorsByArrays(bool force){
+    void setMotorsByArrays(bool force, bool allowReverse){
   for(int i=0; i<NUM_STEPPERS; i++){ //if you're looping
     if (steppers[i].distanceToGo() == 0){
         delta[i] *= -1; //HACK: To save Building another array
-        steppers[i].moveTo(max(delta[i],0));
       }
     if (force){
-      steppers[i].moveTo(max(delta[i],0));
       steppers[i].setMaxSpeed(speed[i]);
       steppers[i].setAcceleration(acceleration[i]);
     }
+    if (!allowReverse) {
+      delta[i] = abs(delta[i]);
+    }
+    steppers[i].moveTo(max(delta[i],0));
     }
   }
 
